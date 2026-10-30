@@ -275,7 +275,16 @@ def process_audio_folder(root_folder, skip_existing=True, synced_only=False, max
     if failed_files:
         print(f"\nFailed files:")
         for f in failed_files:
-            print(f"  - {f.name}")
+            path_parts = f.parts
+            if len(path_parts) >= 3:
+                artist = path_parts[-3]
+                album = path_parts[-2]
+                print(f"  - {artist}/{album}/{f.name}")
+            elif len(path_parts) >= 2:
+                album = path_parts[-2]
+                print(f"  - {album}/{f.name}")
+            else:
+                print(f"  - {f.name}")
 
 
 def process_single_file(audio_file, synced_only=False, max_retries=3):
