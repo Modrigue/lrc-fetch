@@ -1,4 +1,4 @@
-# LRCGet - Lyrics Downloader
+# LRCFetch - Lyrics Downloader
 
 Download synced lyrics (.lrc files) for your audio collection using the free LRCLib API.
 
@@ -46,6 +46,8 @@ python lrc-fetch.py "PATH\TO\COLLECTION"
 - `--force` - Re-download lyrics even if .lrc file already exists
 - `--synced-only` - Only download synced lyrics, skip if only plain lyrics are available
                     (default: fall back to plain lyrics if synced not available)
+- `--retries-per-file N` - Maximum retries per file (default: 3)
+- `--retries-per-dir N` - Maximum retry passes for the folder (default: 2)
 
 Examples:
 ```bash
@@ -57,6 +59,9 @@ python lrc-fetch.py "PATH\TO\COLLECTION\<ARTIST>\<ALBUM>" --synced-only
 
 # Re-download all lyrics (overwrite existing .lrc files)
 python lrc-fetch.py "PATH\TO\COLLECTION\<ARTIST>\<ALBUM>" --force
+
+# Increase retry limits for slower connections
+python lrc-fetch.py "PATH\TO\COLLECTION\<ARTIST>\<ALBUM>" --retries-per-file 5 --retries-per-dir 3
 ```
 
 ## Folder Structure
