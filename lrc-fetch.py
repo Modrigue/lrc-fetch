@@ -9,6 +9,7 @@ Extracts song duration and metadata, then downloads synced lyrics from LRCLib.
 
 import os
 import re
+import sys
 import time
 import random
 import requests
@@ -154,6 +155,11 @@ def search_lyrics(artist, track_name, album=None, duration=None, max_retries=3, 
             elif response.status_code == 404:
                 print(f"  No lyrics found for this track")
                 return None
+            elif response.status_code == 502:
+                # Bad Gateway - server is likely having issues
+                print(f"\n  Error 502: Bad Gateway - The API server is experiencing issues.")
+                print(f"  Please retry in a moment.")
+                sys.exit(1)
             elif response.status_code in (429, 503):
                 # Rate limited or server overloaded - honor Retry-After
                 retry_after = response.headers.get("Retry-After", "5")
@@ -161,11 +167,11 @@ def search_lyrics(artist, track_name, album=None, duration=None, max_retries=3, 
                     retry_after = int(retry_after)
                 except ValueError:
                     retry_after = 5
-                
+
                 # Add random jitter (up to 30% of the delay)
                 jitter = retry_after * 0.3 * random.random()
                 wait_time = retry_after + jitter
-                
+
                 if attempt < max_retries - 1:
                     print(f"  {response.status_code} - Waiting {wait_time:.1f}s before retry {attempt + 1}/{max_retries}")
                     time.sleep(wait_time)
@@ -336,8 +342,6 @@ def process_single_file(audio_file, synced_only=False, max_retries=3):
 
 
 def main():
-    import sys
-    
     if len(sys.argv) < 2:
         print("Usage: python lrc-fetch.py <audio_folder> [--force] [--synced-only] [--retries-per-file N] [--retries-per-dir N] [--retry-delay N]")
         print("\nOptions:")
