@@ -48,6 +48,7 @@ python lrc-fetch.py "PATH\TO\COLLECTION"
                     (default: fall back to plain lyrics if synced not available)
 - `--retries-per-file N` - Maximum retries per file (default: 3)
 - `--retries-per-dir N` - Maximum retry passes for the folder (default: 2)
+- `--retry-delay N` - Delay in seconds between processing files (default: 1.0)
 
 Examples:
 ```bash
@@ -62,6 +63,9 @@ python lrc-fetch.py "PATH\TO\COLLECTION\<ARTIST>\<ALBUM>" --force
 
 # Increase retry limits for slower connections
 python lrc-fetch.py "PATH\TO\COLLECTION\<ARTIST>\<ALBUM>" --retries-per-file 5 --retries-per-dir 3
+
+# Increase delay between requests to avoid rate limiting
+python lrc-fetch.py "PATH\TO\COLLECTION\<ARTIST>\<ALBUM>" --retry-delay 1.0
 ```
 
 ## Folder Structure

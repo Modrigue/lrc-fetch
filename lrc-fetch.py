@@ -189,11 +189,11 @@ def search_lyrics(artist, track_name, album=None, duration=None, max_retries=3, 
     return None
 
 
-def process_audio_folder(root_folder, skip_existing=True, synced_only=False, max_retries_per_file=3, max_retries_per_dir=2):
+def process_audio_folder(root_folder, skip_existing=True, synced_only=False, max_retries_per_file=3, max_retries_per_dir=2, retry_delay=1.0):
     """
     Process all audio files in the given folder and its subfolders.
     Supports MP3, OGG, OPUS, and AAC formats.
-    
+
     Args:
         root_folder: Path to the audio folder
         skip_existing: If True, skip files that already have .lrc files
@@ -201,6 +201,7 @@ def process_audio_folder(root_folder, skip_existing=True, synced_only=False, max
                      Default: False (will fall back to plain lyrics if synced not available)
         max_retries_per_file: Maximum number of retries for each file (default: 3)
         max_retries_per_dir: Maximum number of retry passes for the entire folder (default: 2)
+        retry_delay: Delay in seconds between processing files (default: 1.0)
     """
     root_path = Path(root_folder)
     
@@ -242,7 +243,7 @@ def process_audio_folder(root_folder, skip_existing=True, synced_only=False, max
             failed_files.append(audio_file)
         
         # Add delay to respect rate limits
-        time.sleep(0.5)
+        time.sleep(retry_delay)
     
     # Retry failed files
     for retry_num in range(1, max_retries_per_dir + 1):
@@ -266,7 +267,7 @@ def process_audio_folder(root_folder, skip_existing=True, synced_only=False, max
                 new_failed_files.append(audio_file)
             
             # Add delay to respect rate limits
-            time.sleep(0.5)
+            time.sleep(retry_delay)
         
         failed_files = new_failed_files
     
@@ -338,18 +339,19 @@ def main():
     import sys
     
     if len(sys.argv) < 2:
-        print("Usage: python lrc-fetch.py <audio_folder> [--force] [--synced-only] [--retries-per-file N] [--retries-per-dir N]")
+        print("Usage: python lrc-fetch.py <audio_folder> [--force] [--synced-only] [--retries-per-file N] [--retries-per-dir N] [--retry-delay N]")
         print("\nOptions:")
         print("  --force              Re-download lyrics even if .lrc file already exists")
         print("  --synced-only        Only download synced lyrics, skip if only plain available")
         print("                       (default: fall back to plain lyrics if synced not available)")
         print("  --retries-per-file N Maximum retries per file (default: 3)")
         print("  --retries-per-dir N  Maximum retry passes for the folder (default: 2)")
+        print("  --retry-delay N      Delay in seconds between processing files (default: 1)")
         print("\nSupported formats: MP3, OGG, OPUS, AAC")
         print("\nExample:")
         print('  python lrc-fetch.py "PATH:\\TO\\<ARTIST>\\<ALBUM>"')
         sys.exit(1)
-    
+
     audio_folder = sys.argv[1]
     skip_existing = "--force" not in sys.argv
     synced_only = "--synced-only" in sys.argv
@@ -357,6 +359,7 @@ def main():
     # Parse retry arguments
     nb_retries_per_file = 3
     nb_retries_per_dir = 2
+    retry_delay = 1
 
     try:
         retries_file_idx = sys.argv.index("--retries-per-file")
@@ -372,7 +375,14 @@ def main():
     except ValueError:
         pass
 
-    process_audio_folder(audio_folder, skip_existing=skip_existing, synced_only=synced_only, max_retries_per_file=nb_retries_per_file, max_retries_per_dir=nb_retries_per_dir)
+    try:
+        retry_delay_idx = sys.argv.index("--retry-delay")
+        if retry_delay_idx + 1 < len(sys.argv):
+            retry_delay = float(sys.argv[retry_delay_idx + 1])
+    except ValueError:
+        pass
+
+    process_audio_folder(audio_folder, skip_existing=skip_existing, synced_only=synced_only, max_retries_per_file=nb_retries_per_file, max_retries_per_dir=nb_retries_per_dir, retry_delay=retry_delay)
 
 
 if __name__ == "__main__":
