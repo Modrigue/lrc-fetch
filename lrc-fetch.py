@@ -458,15 +458,19 @@ def process_single_file(audio_file, synced_only=False, max_retries=3):
     """
     print(f"\nProcessing: {audio_file.name}")
     
-    # Extract metadata from path
-    artist, album_from_path, song_name = extract_metadata_from_path(audio_file)
+    # Get metadata from audio file tags
+    artist = get_artist_from_metadata(audio_file)
+    song_name = get_title_from_metadata(audio_file)
+    album = get_album_from_metadata(audio_file)
     
-    if not artist or not song_name:
-        print(f"  Could not extract metadata from path")
+    # Check if required tags are present
+    if not artist:
+        print(f"  Skipping: No artist tag found in file")
         return False
     
-    # Get album from audio file metadata tags
-    album = get_album_from_metadata(audio_file)
+    if not song_name:
+        print(f"  Skipping: No title tag found in file")
+        return False
     
     print(f"  Artist: {artist}")
     if album:
