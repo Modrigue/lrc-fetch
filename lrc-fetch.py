@@ -3,7 +3,7 @@
 LRC Fetch - Download lyrics (.lrc files) for audio files using LRCLib API.
 
 Parses audio files in the format: <Artist>/<Album>/<Album>/<index>. <song_name>
-Supports MP3, OGG, OPUS, and AAC formats.
+Supports MP3, OGG, OPUS, AAC, and M4A formats.
 Extracts song duration and metadata, then downloads synced lyrics from LRCLib.
 """
 
@@ -39,6 +39,11 @@ try:
 except ImportError:
     AAC = None
 
+try:
+    from mutagen.mp4 import MP4
+except ImportError:
+    MP4 = None
+
 
 def get_audio_duration(file_path):
     """Get the duration of an audio file in seconds."""
@@ -62,6 +67,9 @@ def get_audio_duration(file_path):
         elif ext == '.aac' and AAC:
             audio = AAC(file_path)
             return audio.info.length
+        elif ext == '.m4a' and MP4:
+            audio = MP4(file_path)
+            return audio.info.length
         
         return None
     except Exception as e:
@@ -77,7 +85,7 @@ def get_album_from_metadata(file_path):
             return None
         
         # Try different tag keys based on format
-        # MP3 uses TALB, OGG/OPUS uses ALBUM
+        # MP3 uses TALB, OGG/OPUS uses ALBUM, M4A uses ©alb
         album = None
         
         # Try common album tag keys
@@ -87,6 +95,10 @@ def get_album_from_metadata(file_path):
                 album = album[0]
         elif 'ALBUM' in audio:
             album = audio['ALBUM']
+            if isinstance(album, list):
+                album = album[0]
+        elif '©alb' in audio:
+            album = audio['©alb']
             if isinstance(album, list):
                 album = album[0]
         
@@ -108,7 +120,7 @@ def extract_metadata_from_path(file_path):
     """
     Extract artist, album, and song name from the file path.
     Expected format: <Artist>/<Album>/<Album>/<index>. <song_name>
-    Supports .mp3, .ogg, .opus, .aac extensions
+    Supports .mp3, .ogg, .opus, .aac, .m4a extensions
     """
     path_parts = Path(file_path).parts
     
@@ -132,7 +144,7 @@ def extract_metadata_from_path(file_path):
     # Format: "01. Song Name.mp3" or "01 Song Name.mp3"
     song_name = re.sub(r'^\d+[\.\s]*', '', filename)
     # Remove all supported audio extensions
-    song_name = re.sub(r'\.(mp3|ogg|opus|aac)$', '', song_name, flags=re.IGNORECASE)
+    song_name = re.sub(r'\.(mp3|ogg|opus|aac|m4a)$', '', song_name, flags=re.IGNORECASE)
     
     return artist, album, song_name
 
@@ -233,7 +245,7 @@ def search_lyrics(artist, track_name, album=None, duration=None, max_retries=3, 
 def process_audio_folder(root_folder, skip_existing=True, synced_only=False, max_retries_per_file=3, max_retries_per_dir=2, retry_delay=1.0):
     """
     Process all audio files in the given folder and its subfolders.
-    Supports MP3, OGG, OPUS, and AAC formats.
+    Supports MP3, OGG, OPUS, AAC, and M4A formats.
 
     Args:
         root_folder: Path to the audio folder
@@ -251,7 +263,7 @@ def process_audio_folder(root_folder, skip_existing=True, synced_only=False, max
         return
     
     # Find all supported audio files
-    audio_extensions = ['*.mp3', '*.ogg', '*.opus', '*.aac']
+    audio_extensions = ['*.mp3', '*.ogg', '*.opus', '*.aac', '*.m4a']
     audio_files = []
     for ext in audio_extensions:
         audio_files.extend(root_path.rglob(ext))
@@ -332,7 +344,7 @@ def process_audio_folder(root_folder, skip_existing=True, synced_only=False, max
 def process_single_file(audio_file, synced_only=False, max_retries=3):
     """
     Process a single audio file and download its lyrics.
-    Supports MP3, OGG, OPUS, and AAC formats.
+    Supports MP3, OGG, OPUS, AAC, and M4A formats.
     
     Returns:
         True if lyrics were successfully downloaded, False otherwise
@@ -392,7 +404,7 @@ def main():
         print("  --retries-per-file N Maximum retries per file (default: 3)")
         print("  --retries-per-dir N  Maximum retry passes for the folder (default: 2)")
         print("  --retry-delay N      Delay in seconds between processing files (default: 1)")
-        print("\nSupported formats: MP3, OGG, OPUS, AAC")
+        print("\nSupported formats: MP3, OGG, OPUS, AAC, M4A")
         print("\nExample:")
         print('  python lrc-fetch.py "PATH:\\TO\\<ARTIST>\\<ALBUM>"')
         sys.exit(1)
