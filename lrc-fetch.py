@@ -69,6 +69,41 @@ def get_audio_duration(file_path):
         return None
 
 
+def get_album_from_metadata(file_path):
+    """Extract album name from audio file metadata tags."""
+    try:
+        audio = File(file_path)
+        if audio is None:
+            return None
+        
+        # Try different tag keys based on format
+        # MP3 uses TALB, OGG/OPUS uses ALBUM
+        album = None
+        
+        # Try common album tag keys
+        if 'TALB' in audio:
+            album = audio['TALB']
+            if isinstance(album, list):
+                album = album[0]
+        elif 'ALBUM' in audio:
+            album = audio['ALBUM']
+            if isinstance(album, list):
+                album = album[0]
+        
+        # Convert to string if it's a mutagen object
+        if album is not None:
+            album = str(album)
+            # Clean up the album name
+            album = album.strip()
+            if album:
+                return album
+        
+        return None
+    except Exception as e:
+        print(f"  Error reading album metadata: {e}")
+        return None
+
+
 def extract_metadata_from_path(file_path):
     """
     Extract artist, album, and song name from the file path.
@@ -305,14 +340,20 @@ def process_single_file(audio_file, synced_only=False, max_retries=3):
     print(f"\nProcessing: {audio_file.name}")
     
     # Extract metadata from path
-    artist, album, song_name = extract_metadata_from_path(audio_file)
+    artist, album_from_path, song_name = extract_metadata_from_path(audio_file)
     
     if not artist or not song_name:
         print(f"  Could not extract metadata from path")
         return False
     
+    # Get album from audio file metadata tags
+    album = get_album_from_metadata(audio_file)
+    
     print(f"  Artist: {artist}")
-    print(f"  Album: {album}")
+    if album:
+        print(f"  Album (from tags): {album}")
+    else:
+        print(f"  Album: (no album tag found)")
     print(f"  Song: {song_name}")
     
     # Get duration
@@ -322,7 +363,7 @@ def process_single_file(audio_file, synced_only=False, max_retries=3):
     else:
         print(f"  Could not read duration")
     
-    # Search for lyrics
+    # Search for lyrics (only pass album if it was found in tags)
     lyrics = search_lyrics(artist, song_name, album, duration, synced_only=synced_only)
     
     if lyrics:
