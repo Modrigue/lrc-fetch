@@ -432,7 +432,9 @@ def _process_single_folder(root_folder, skip_existing, synced_only, max_retries_
         failed_files = new_failed_files
     
     print("\n" + "=" * 60)
-    print(f"Done! Success: {total_success}, Failed: {total_failed}")
+    print(f"Done!")
+    print(f"Successful downloads: {total_success}")
+    print(f"Failed downloads: {total_failed}")
     if failed_files:
         print(f"\nFailed files:")
         for f in failed_files:
