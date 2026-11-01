@@ -116,6 +116,84 @@ def get_album_from_metadata(file_path):
         return None
 
 
+def get_artist_from_metadata(file_path):
+    """Extract artist name from audio file metadata tags."""
+    try:
+        audio = File(file_path)
+        if audio is None:
+            return None
+        
+        # Try different tag keys based on format
+        # MP3 uses TPE1, OGG/OPUS uses ARTIST, M4A uses ©ART
+        artist = None
+        
+        # Try common artist tag keys
+        if 'TPE1' in audio:
+            artist = audio['TPE1']
+            if isinstance(artist, list):
+                artist = artist[0]
+        elif 'ARTIST' in audio:
+            artist = audio['ARTIST']
+            if isinstance(artist, list):
+                artist = artist[0]
+        elif '©ART' in audio:
+            artist = audio['©ART']
+            if isinstance(artist, list):
+                artist = artist[0]
+        
+        # Convert to string if it's a mutagen object
+        if artist is not None:
+            artist = str(artist)
+            # Clean up the artist name
+            artist = artist.strip()
+            if artist:
+                return artist
+        
+        return None
+    except Exception as e:
+        print(f"  Error reading artist metadata: {e}")
+        return None
+
+
+def get_title_from_metadata(file_path):
+    """Extract song title from audio file metadata tags."""
+    try:
+        audio = File(file_path)
+        if audio is None:
+            return None
+        
+        # Try different tag keys based on format
+        # MP3 uses TIT2, OGG/OPUS uses TITLE, M4A uses ©nam
+        title = None
+        
+        # Try common title tag keys
+        if 'TIT2' in audio:
+            title = audio['TIT2']
+            if isinstance(title, list):
+                title = title[0]
+        elif 'TITLE' in audio:
+            title = audio['TITLE']
+            if isinstance(title, list):
+                title = title[0]
+        elif '©nam' in audio:
+            title = audio['©nam']
+            if isinstance(title, list):
+                title = title[0]
+        
+        # Convert to string if it's a mutagen object
+        if title is not None:
+            title = str(title)
+            # Clean up the title
+            title = title.strip()
+            if title:
+                return title
+        
+        return None
+    except Exception as e:
+        print(f"  Error reading title metadata: {e}")
+        return None
+
+
 def extract_metadata_from_path(file_path):
     """
     Extract artist, album, and song name from the file path.
@@ -248,13 +326,42 @@ def process_audio_folder(root_folder, skip_existing=True, synced_only=False, max
     Supports MP3, OGG, OPUS, AAC, and M4A formats.
 
     Args:
-        root_folder: Path to the audio folder
+        root_folder: Path to the audio folder (can contain wildcards *)
         skip_existing: If True, skip files that already have .lrc files
         synced_only: If True, only download synced lyrics (not plain lyrics)
                      Default: False (will fall back to plain lyrics if synced not available)
         max_retries_per_file: Maximum number of retries for each file (default: 3)
         max_retries_per_dir: Maximum number of retry passes for the entire folder (default: 2)
         retry_delay: Delay in seconds between processing files (default: 1.0)
+    """
+    # Check if the path contains wildcards
+    if '*' in root_folder:
+        # Expand wildcard to match multiple directories
+        from glob import glob
+        matched_paths = glob(root_folder)
+        
+        if not matched_paths:
+            print(f"Error: No directories found matching pattern '{root_folder}'")
+            return
+        
+        print(f"Found {len(matched_paths)} directories matching pattern '{root_folder}'")
+        print("=" * 60)
+        
+        # Process each matched directory
+        for i, path in enumerate(matched_paths, 1):
+            print(f"\n[{i}/{len(matched_paths)}] Processing directory: {path}")
+            print("=" * 60)
+            _process_single_folder(path, skip_existing, synced_only, max_retries_per_file, max_retries_per_dir, retry_delay)
+        
+        return
+    
+    # No wildcard, process single folder
+    _process_single_folder(root_folder, skip_existing, synced_only, max_retries_per_file, max_retries_per_dir, retry_delay)
+
+
+def _process_single_folder(root_folder, skip_existing, synced_only, max_retries_per_file, max_retries_per_dir, retry_delay):
+    """
+    Internal function to process a single folder.
     """
     root_path = Path(root_folder)
     
@@ -363,7 +470,7 @@ def process_single_file(audio_file, synced_only=False, max_retries=3):
     
     print(f"  Artist: {artist}")
     if album:
-        print(f"  Album (from tags): {album}")
+        print(f"  Album: {album}")
     else:
         print(f"  Album: (no album tag found)")
     print(f"  Song: {song_name}")
@@ -405,8 +512,10 @@ def main():
         print("  --retries-per-dir N  Maximum retry passes for the folder (default: 2)")
         print("  --retry-delay N      Delay in seconds between processing files (default: 1)")
         print("\nSupported formats: MP3, OGG, OPUS, AAC, M4A")
-        print("\nExample:")
+        print("\nExamples:")
         print('  python lrc-fetch.py "PATH:\\TO\\<ARTIST>\\<ALBUM>"')
+        print('  python lrc-fetch.py "PATH:\\TO\\MUSIC\\*"  # Process all subdirectories')
+        print('  python lrc-fetch.py "PATH:\\TO\\MUSIC\\Artist*"  # Process matching directories')
         sys.exit(1)
 
     audio_folder = sys.argv[1]
